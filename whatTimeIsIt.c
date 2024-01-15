@@ -61,36 +61,36 @@ int main(int argc, char** argv, char** envs)
     ntpPacket ntpPacket;
     build_ntp_packet(&ntpPacket);
 
-    struct sockaddr_in ntp_server;
-    ntp_server.sin_family = AF_INET;
-    ntp_server.sin_port = htons(123);
-    inet_pton(AF_INET, "216.239.35.12", &ntp_server.sin_addr);
+    struct sockaddr_in ntpServer;
+    ntpServer.sin_family = AF_INET;
+    ntpServer.sin_port = htons(123);
+    inet_pton(AF_INET, "216.239.35.12", &ntpServer.sin_addr);
 
-    int ntpPacketSize = sizeof(ntpPacket);
-    int ntpServerSize = sizeof(ntp_server);
-    sendto(sock, (const char*)&ntpPacket, sizeof(ntpPacket), 0, (struct sockaddr*)&ntp_server, ntpServerSize);
-    recvfrom(sock, (char*)&ntpPacket, sizeof(ntpPacket), 0, (struct sockaddr*)&ntp_server, &ntpServerSize);
+    int ntpServerSize = sizeof(ntpServer);
+    sendto(sock, (const char*)&ntpPacket, sizeof(ntpPacket), 0, (struct sockaddr*)&ntpServer, ntpServerSize);
+    recvfrom(sock, (char*)&ntpPacket, sizeof(ntpPacket), 0, NULL, NULL);
 
-    printf("Server response from port %hu:\n", htons(ntp_server.sin_port));
+    printf("Server response from port %hu:\n", htons(ntpServer.sin_port));
     printf("Transmit Timestamp: %llu\n", ntpPacket.transmit_timestamp);
 
-    time_t now;
-    struct tm ts;
-    char timeBuffer[TIME_BUF_MAX_SIZE];
-    
-    time(&now);
-    if(localtime_s(&ts, &now) != 0)
-    {
-        fprintf(stderr, "Error in localtime_s!\n");
-        #ifdef _WIN32
-            closesocket(sock);
-        #else
-            close(sock);
-        #endif
-        return -1;
-    }
+    time_t timeInfo;
+    #ifdef _WIN32
+        if(gmtime_s(&timeInfo, (const time_t*)&ntpPacket.transmit_timestamp) != 0)
+        {
+            fprintf(stderr, "Error in gmtime_s!\n");
+            #ifdef _WIN32
+                closesocket(sock);
+            #else
+                close(sock);
+            #endif
+            return -1;
+        }
+    #else
+        gmtime_r((const time_t*)&ntpPacket.transmit_timestamp, &timeInfo);
+    #endif
 
-    strftime(timeBuffer, sizeof(timeBuffer), TIME_FORMAT_STRING, &ts);
+    char timeBuffer[TIME_BUF_MAX_SIZE];
+    strftime(timeBuffer, sizeof(timeBuffer), TIME_FORMAT_STRING, &timeInfo);
     printf("%s\n", timeBuffer);
 
     #ifdef _WIN32
