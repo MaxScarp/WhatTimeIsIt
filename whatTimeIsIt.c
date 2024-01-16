@@ -70,10 +70,10 @@ int main(int argc, char** argv, char** envs)
     sendto(sock, (const char*)&ntpPacket, sizeof(ntpPacket), 0, (struct sockaddr*)&ntpServer, ntpServerSize);
     recvfrom(sock, (char*)&ntpPacket, sizeof(ntpPacket), 0, NULL, NULL);
 
-    printf("Server response from port %hu:\n", htons(ntpServer.sin_port));
-    printf("Transmit Timestamp: %llu\n", ntpPacket.transmit_timestamp);
-
-    time_t timeInfo;
+    ntpPacket.transmit_timestamp = ntohl(ntpPacket.transmit_timestamp);
+    ntpPacket.transmit_timestamp -= ((unsigned long long)3600 * 24 * (365 * 70 + 17)) ;
+    
+    struct tm timeInfo;
     #ifdef _WIN32
         if(gmtime_s(&timeInfo, (const time_t*)&ntpPacket.transmit_timestamp) != 0)
         {
@@ -91,7 +91,7 @@ int main(int argc, char** argv, char** envs)
 
     char timeBuffer[TIME_BUF_MAX_SIZE];
     strftime(timeBuffer, sizeof(timeBuffer), TIME_FORMAT_STRING, &timeInfo);
-    printf("%s\n", timeBuffer);
+    printf("Actual time is: %s. May differe by 1 hour depending on the system!\n", timeBuffer);
 
     #ifdef _WIN32
         closesocket(sock);
